@@ -7,7 +7,7 @@ A stylish and functional PowerShell profile that looks and feels almost as good 
 Execute the following command in an elevated PowerShell window to install the PowerShell profile:
 
 ```
-irm "Change Me" | iex
+irm "(https://github.com/rookie-eyes/powershell-profile/raw/main/setup.ps1)" | iex
 ```
 
 ## 🛠️ Fix the Missing Font
