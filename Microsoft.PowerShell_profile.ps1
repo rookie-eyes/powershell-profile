@@ -80,7 +80,17 @@ function admin {
         Start-Process "$psHome\powershell.exe" -Verb runAs
     }
 }
-
+# Simple function to start a new elevated process. If arguments are supplied then 
+# a single command is started with admin rights; if not then a new admin instance
+# of PowerShell ISE is started.
+function ISE {
+    if ($args.Count -gt 0) {   
+        $argList = "& '" + $args + "'"
+        Start-Process "$psHome\powershell_ise.exe" -Verb runAs -ArgumentList $argList
+    } else {
+        Start-Process "$psHome\powershell_ise.exe" -Verb runAs
+    }
+}
 # Set UNIX-like aliases for the admin command, so sudo <command> will run the command
 # with elevated rights. 
 Set-Alias -Name su -Value admin
