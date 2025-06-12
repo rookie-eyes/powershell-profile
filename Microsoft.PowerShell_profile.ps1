@@ -38,7 +38,6 @@ function Update-Profile {
     }
 }
 Update-Profile
-
 function Update-PowerShell {
     if (-not $global:canConnectToGitHub) {
         Write-Host "Skipping PowerShell update check due to GitHub.com not responding within 1 second." -ForegroundColor Yellow
@@ -73,11 +72,50 @@ Update-PowerShell
 # a single command is started with admin rights; if not then a new admin instance
 # of PowerShell is started.
 function admin {
-    if ($args.Count -gt 0) {   
-        $argList = "& '" + $args + "'"
-        Start-Process "$psHome\powershell.exe" -Verb runAs -ArgumentList $argList
+
+    [CmdletBinding(DefaultParameterSetName='NoCommand')]
+    param (
+        [Parameter(Position=0, ValueFromRemainingArguments=$true, ParameterSetName='Command')]
+        [string[]]$Command
+    )
+
+    $powerShellExecutable = $null
+
+    if ($PSVersionTable.PSEdition -eq 'Core') {
+        $powerShellExecutable = Join-Path $PSHOME "pwsh.exe"
+        if (-not (Test-Path $powerShellExecutable)) {
+            $powerShellExecutable = "$($env:ProgramFiles)\PowerShell\7\pwsh.exe"
+            if (-not (Test-Path $powerShellExecutable)) {
+                Write-Error "Could not locate 'pwsh.exe' for PowerShell 7. Please ensure PowerShell 7 is installed correctly."
+                return
+            }
+        }
     } else {
-        Start-Process "$psHome\powershell.exe" -Verb runAs
+        $powerShellExecutable = Join-Path $PSHOME "powershell.exe"
+    }
+    if (-not (Test-Path $powerShellExecutable)) {
+        Write-Error "Could not locate the PowerShell executable at '$powerShellExecutable'. Please ensure PowerShell is installed correctly."
+        return
+    }
+    if (-not $powerShellExecutable) {
+        Write-Error "Could not determine the PowerShell executable path for the current session."
+        return
+    }
+
+    $argumentList = @()
+    $argumentList += "-NoExit"
+    if ($PSBoundParameters.ContainsKey('Command')) {
+        $commandToExecute = $Command -join ' '
+        $argumentList += "-Command"
+        $argumentList += "& { $commandToExecute }"
+    }
+
+    try {
+        Start-Process -FilePath $powerShellExecutable -Verb RunAs -ArgumentList $argumentList
+    }
+    catch {
+        Write-Error "Failed to launch administrative PowerShell window. Error: $($_.Exception.Message)"
+        Write-Warning "This usually happens if User Account Control (UAC) is disabled or if you do not have sufficient permissions to run as administrator."
     }
 }
 # Simple function to start a new elevated process. If arguments are supplied then 
