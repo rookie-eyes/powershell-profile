@@ -96,11 +96,39 @@ function ISE {
 # This function retrieves the system uptime using WMI and formats it into a readable string.
 # It calculates the difference between the current date and the last boot time of the operating system.
 function Get-Uptime {
-   $os = Get-WmiObject win32_operatingsystem
-   $uptime = (Get-Date) - ($os.ConvertToDateTime($os.lastbootuptime))
-   $Display = "Uptime: " + $Uptime.Days + " days, " + $Uptime.Hours + " hours, " + $Uptime.Minutes + " minutes" 
-   Write-Output $Display
+    if (Get-Command -Name Get-CimInstance -ErrorAction SilentlyContinue) {
+        try {
+            $os = Get-CimInstance -ClassName Win32_OperatingSystem
+            $lastBootTime = $os.LastBootUpTime
+        }
+        catch {
+            Write-Warning "Could not use Get-CimInstance. Attempting to fall back to Get-WmiObject. Error: $($_.Exception.Message)"
+            try {
+                $os = Get-WmiObject -Class Win32_OperatingSystem
+                $lastBootTime = $os.ConvertToDateTime($os.LastBootUpTime)
+            }
+            catch {
+                Write-Error "Failed to retrieve operating system information using either Get-CimInstance or Get-WmiObject. Error: $($_.Exception.Message)"
+                return
+            }
+        }
+    } else {
+        try {
+            $os = Get-WmiObject -Class Win32_OperatingSystem
+            $lastBootTime = $os.ConvertToDateTime($os.LastBootUpTime)
+        }
+        catch {
+            Write-Error "Failed to retrieve operating system information using Get-WmiObject. Error: $($_.Exception.Message)"
+            return
+        }
+    }
+
+    
+    $uptime = (Get-Date) - $lastBootTime
+    $Display = "Uptime: $($uptime.Days) days, $($uptime.Hours) hours, $($uptime.Minutes) minutes"
+    Write-Output $Display
 }
+
 
 # Set UNIX-like aliases for the admin command, so sudo <command> will run the command
 # with elevated rights. 
