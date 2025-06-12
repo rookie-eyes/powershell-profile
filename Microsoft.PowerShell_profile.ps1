@@ -91,6 +91,17 @@ function ISE {
         Start-Process "$psHome\powershell_ise.exe" -Verb runAs
     }
 }
+
+# Simple Function to get system uptime in a human-readable format
+# This function retrieves the system uptime using WMI and formats it into a readable string.
+# It calculates the difference between the current date and the last boot time of the operating system.
+function Get-Uptime {
+   $os = Get-WmiObject win32_operatingsystem
+   $uptime = (Get-Date) - ($os.ConvertToDateTime($os.lastbootuptime))
+   $Display = "Uptime: " + $Uptime.Days + " days, " + $Uptime.Hours + " hours, " + $Uptime.Minutes + " minutes" 
+   Write-Output $Display
+}
+
 # Set UNIX-like aliases for the admin command, so sudo <command> will run the command
 # with elevated rights. 
 Set-Alias -Name su -Value admin
