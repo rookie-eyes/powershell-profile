@@ -133,7 +133,7 @@ function ISE {
 # Simple Function to get system uptime in a human-readable format
 # This function retrieves the system uptime using WMI and formats it into a readable string.
 # It calculates the difference between the current date and the last boot time of the operating system.
-function Get-Uptime {
+function HoursUptime {
     if (Get-Command -Name Get-CimInstance -ErrorAction SilentlyContinue) {
         try {
             $os = Get-CimInstance -ClassName Win32_OperatingSystem
