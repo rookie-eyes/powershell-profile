@@ -211,6 +211,40 @@ function ff($name) {
 
 # Network Utilities
 function Get-PubIP { (Invoke-WebRequest http://ifconfig.me/ip).Content }
+function Get-PrivIP { (Get-NetIPAddress | Where-Object { $_.AddressFamily -eq "IPv4" -and $_.InterfaceAlias -ne "Loopback Pseudo-Interface 1" }).IPAddress }
+function Get-WiFiProfiles {
+    # Function to retrieve Wi-Fi profiles and their passwords
+    param (
+        [int]$DelayInSeconds = 0
+    )
+
+    # Array to store profiles
+    $Profiles = @()
+
+    # Get Wi-Fi profiles
+    $Profiles += (netsh wlan show profiles) | 
+        Select-String "\:(.+)$" | 
+        Foreach-Object { $_.Matches.Groups[1].Value.Trim() }
+
+    # Retrieve Wi-Fi passwords and format the output
+    $Profiles | 
+        ForEach-Object {
+            $SSID = $_
+            (netsh wlan show profile name="$_" key=clear) |
+                Select-String "Key Content\W+\:(.+)$" |
+                ForEach-Object { 
+                    $pass = $_.Matches.Groups[1].Value.Trim()
+                    [PSCustomObject]@{
+                        Wireless_Network_Name = $SSID
+                        Password = $pass
+                    }
+                }
+        } |
+        Format-Table -AutoSize
+
+    # Delay as specified
+    Start-Sleep -Seconds $DelayInSeconds
+}
 
 # System Utilities
 function uptime {
