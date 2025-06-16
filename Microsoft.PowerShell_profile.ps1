@@ -128,61 +128,62 @@ function ISE {
         [string[]]$FilePath
     )
 
-    $isePath = Join-Path $psHome "powershell_ise.exe"
+    $isePath = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell_ise.exe"
+
+    if (-not (Test-Path $isePath)) {
+        Write-Warning "PowerShell ISE not found at '$isePath'. Ensure Windows PowerShell is installed."
+        return
+    }
 
     if ($FilePath.Count -gt 0) {
-        # Enclose the path in quotes to handle spaces and special characters
         $argList = "-File `"" + ($FilePath -join ' ') + "`""
-        Start-Process -FilePath $isePath -Verb RunAs -ArgumentList $argList
+        
+        Write-Host "Opening ISE with file(s): $($FilePath -join ', ')"
+        Start-Process -FilePath $isePath -Verb RunAs -ArgumentList $argList -ErrorAction Stop
     } else {
-        Start-Process -FilePath $isePath -Verb RunAs
+        Write-Host "Opening ISE without a specific file."
+        Start-Process -FilePath $isePath -Verb RunAs -ErrorAction Stop
     }
 }
 
-function iseadmin {
+function ISEAdmin {
     [CmdletBinding(DefaultParameterSetName='NoCommand')]
     param (
         [Parameter(Position=0, ValueFromRemainingArguments=$true, ParameterSetName='Command')]
         [string[]]$Command
     )
 
-    # PowerShell ISE (Integrated Scripting Environment) is part of Windows PowerShell,
-    # not PowerShell Core. Its executable is 'powershell_ise.exe'.
-    $iseExecutable = Join-Path $PSHOME "powershell_ise.exe"
+    $iseExecutable = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell_ise.exe"
 
-    # Verify that the PowerShell ISE executable exists at the expected path.
     if (-not (Test-Path $iseExecutable)) {
-        Write-Error "Could not locate 'powershell_ise.exe'. Please ensure PowerShell ISE is installed correctly on your system."
+        Write-Error "Could not locate 'powershell_ise.exe' at '$iseExecutable'. Please ensure PowerShell ISE is installed correctly on your system."
         return
     }
 
-    # Initialize an array to hold arguments passed to powershell_ise.exe
     $argumentList = @()
 
-    # If the user provides a command, pass it to ISE using its -Command parameter.
-    # This will execute the command directly within the ISE console pane upon launch.
     if ($PSBoundParameters.ContainsKey('Command')) {
         $commandToExecute = $Command -join ' '
         $argumentList += "-Command"
-        # Wrap the command in a script block to ensure it's properly interpreted and executed by ISE.
         $argumentList += "& { $commandToExecute }"
     }
 
-    # Attempt to launch PowerShell ISE with administrative privileges using 'Start-Process'.
-    # The -Verb RunAs triggers the User Account Control (UAC) prompt for elevation.
     try {
         Write-Host "Attempting to launch PowerShell ISE with administrative privileges..."
-        # Only pass -ArgumentList if there are actual arguments to provide.
-        # This prevents the error when no command is specified.
-        if ($PSBoundParameters.ContainsKey('Command')) {
-            Start-Process -FilePath $iseExecutable -Verb RunAs -ArgumentList $argumentList
-        } else {
-            Start-Process -FilePath $iseExecutable -Verb RunAs
+
+        $startProcessParams = @{
+            FilePath = $iseExecutable
+            Verb     = "RunAs"
         }
+
+        if ($argumentList.Count -gt 0) {
+            $startProcessParams.ArgumentList = $argumentList
+        }
+
+        Start-Process @startProcessParams
+        
     }
     catch {
-        # Catch any errors during the launch process, such as UAC being disabled
-        # or insufficient permissions.
         Write-Error "Failed to launch administrative PowerShell ISE window. Error: $($_.Exception.Message)"
         Write-Warning "This usually happens if User Account Control (UAC) is disabled or if you do not have sufficient permissions to run as administrator."
     }
