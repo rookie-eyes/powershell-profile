@@ -123,11 +123,19 @@ function admin {
 # of PowerShell ISE is started.
 
 function ISE {
-    if ($args.Count -gt 0) {   
-        $argList = "& '" + $args + "'"
-        Start-Process "$psHome\powershell_ise.exe" -Verb runAs -ArgumentList $argList
+    param(
+        [Parameter(ValueFromRemainingArguments=$true)]
+        [string[]]$FilePath
+    )
+
+    $isePath = Join-Path $psHome "powershell_ise.exe"
+
+    if ($FilePath.Count -gt 0) {
+        # Enclose the path in quotes to handle spaces and special characters
+        $argList = "-File `"" + ($FilePath -join ' ') + "`""
+        Start-Process -FilePath $isePath -Verb RunAs -ArgumentList $argList
     } else {
-        Start-Process "$psHome\powershell_ise.exe" -Verb runAs
+        Start-Process -FilePath $isePath -Verb RunAs
     }
 }
 
