@@ -118,10 +118,99 @@ function admin {
         Write-Warning "This usually happens if User Account Control (UAC) is disabled or if you do not have sufficient permissions to run as administrator."
     }
 }
-# Simple function to start a new elevated process. If arguments are supplied then 
-# a single command is started with admin rights; if not then a new admin instance
-# of PowerShell ISE is started.
+# Add a user named 'TestUser' to the Administrators group
+# Add-LocalAdmin -User "TestUser"
+# Function to add a specified user to the local Administrators group
+function Add-LocalAdmin
+{
+    param
+    (
+        [Parameter(Mandatory=$true)]
+        [string]$User
+    )
 
+    Write-Host "Checking administrative privileges..."
+    if (-not (Test-IsAdministrator)) {
+        Write-Error "Insufficient privileges. Please run PowerShell as Administrator to use this function."
+        return
+    }
+
+    $targetUser = $User # Use the specified user
+    $localAdminGroup = Get-LocalGroup -Name "Administrators" -ErrorAction SilentlyContinue
+
+    if (-not $localAdminGroup) {
+        Write-Error "The local 'Administrators' group was not found. This is unexpected."
+        return
+    }
+
+    Write-Host "Target user for action: $targetUser"
+    Write-Host "Action requested: Add '$targetUser' to 'Administrators' group."
+
+    try {
+        if (-not (Get-LocalGroupMember -Group $localAdminGroup | Where-Object {$_.Name -eq $targetUser})) {
+            Add-LocalGroupMember -Group $localAdminGroup -Member $targetUser -ErrorAction Stop
+            Write-Host "SUCCESS: '$targetUser' has been added to the 'Administrators' group."
+            Write-Host "Please note that changes may require logging out and logging back in, or a system restart, to take full effect for '$targetUser'."
+        } else {
+            Write-Host "INFO: '$targetUser' is already a member of the 'Administrators' group."
+        }
+    }
+    catch {
+        Write-Error "An error occurred while adding user '$targetUser': $($_.Exception.Message)"
+        Write-Error "Ensure the user account '$targetUser' exists and you have permissions."
+    }
+}
+
+# Function to remove a specified user from the local Administrators group
+# Remove a user named 'ExampleUser' from the Administrators group
+# Remove-LocalAdmin -User "ExampleUser"
+function Remove-LocalAdmin
+{
+    param
+    (
+        [Parameter(Mandatory=$true)]
+        [string]$User
+    )
+
+    Write-Host "Checking administrative privileges..."
+    if (-not (Test-IsAdministrator)) {
+        Write-Error "Insufficient privileges. Please run PowerShell as Administrator to use this function."
+        return
+    }
+
+    $targetUser = $User # Use the specified user
+    $localAdminGroup = Get-LocalGroup -Name "Administrators" -ErrorAction SilentlyContinue
+
+    if (-not $localAdminGroup) {
+        Write-Error "The local 'Administrators' group was not found. This is unexpected."
+        return
+    }
+
+    Write-Host "Target user for action: $targetUser"
+    Write-Host "Action requested: Remove '$targetUser' from 'Administrators' group."
+
+    try {
+        if (Get-LocalGroupMember -Group $localAdminGroup | Where-Object {$_.Name -eq $targetUser}) {
+            Remove-LocalGroupMember -Group $localAdminGroup -Member $targetUser -ErrorAction Stop
+            Write-Host "SUCCESS: '$targetUser' has been removed from the 'Administrators' group."
+            Write-Host "Please note that changes may require logging out and logging back in, or a system restart, to take full effect for '$targetUser'."
+        } else {
+            Write-Host "INFO: '$targetUser' is not a member of the 'Administrators' group."
+        }
+    }
+    catch {
+        Write-Error "An error occurred while removing user '$targetUser': $($_.Exception.Message)"
+        Write-Error "Ensure the user account '$targetUser' exists and you have permissions."
+    }
+}
+
+# This function checks for the existence of PowerShell ISE and starts it with admin rights.
+# If file paths are provided, it opens those files in ISE; otherwise, it opens ISE without any files.
+# If PowerShell ISE is not found, it provides a warning message.
+# The function uses Start-Process to launch ISE with the specified files or without any files
+# and runs it with elevated privileges.
+# This function is useful for quickly opening PowerShell ISE with specific scripts or files
+# or just starting ISE for script editing without any specific files.
 function ISE {
     param(
         [Parameter(ValueFromRemainingArguments=$true)]
